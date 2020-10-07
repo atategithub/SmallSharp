@@ -1,9 +1,11 @@
-using System.Linq;
+﻿using System.Linq;
 using Microsoft.CodeAnalysis;
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 using System.IO;
 using Newtonsoft.Json;
+using Microsoft.CodeAnalysis.Diagnostics;
+using System.Dynamic;
 
 namespace SmallSharp
 {
@@ -14,7 +16,14 @@ namespace SmallSharp
 
         public void Execute(GeneratorExecutionContext context)
         {
-            context.CheckDebugger();
+            context.AnalyzerConfigOptions.CheckDebugger();
+
+            if (context.AnalyzerConfigOptions.GlobalOptions.TryGetValue("build_property.ActiveDebugProfile", out var activeProfile) &&
+                context.AnalyzerConfigOptions.GlobalOptions.TryGetValue("build_property.MSBuildProjectDirectory", out var projectDirectory))
+            {
+                var filePath = Path.Combine(projectDirectory, activeProfile);
+                EnsureOpened(context.AnalyzerConfigOptions, filePath);
+            }
 
             var documents = from additional in context.AdditionalFiles
                             let options = context.AnalyzerConfigOptions.GetOptions(additional)
@@ -43,6 +52,29 @@ namespace SmallSharp
 
                 File.WriteAllText(filePath, json);
             }
+
+
+        }
+
+        void EnsureOpened(AnalyzerConfigOptionsProvider options, string filePath)
+        {
+            options.CheckDebugger();
+
+            try
+            {
+                var workspace = options.AsDynamicReflection()._projectState.LanguageServices.WorkspaceServices.Workspace;
+                IEnumerable<object> ids = workspace.CurrentSolution.GetDocumentIdsWithFilePath(filePath);
+                var docId = ids.FirstOrDefault();
+                if (docId == null)
+                    return;
+
+                var isopen = ((IEnumerable<object>)workspace.GetOpenDocumentIds(null).target).Any(id => Equals(id, docId));
+                if (!isopen)
+                    workspace.OpenDocument(docId, true);
+            }
+            catch
+            {
+                // NOT SUPPORTED
             }
         }
     }

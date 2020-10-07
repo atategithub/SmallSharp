@@ -11,6 +11,7 @@
     <CompilerVisibleProperty Include="DebugSourceGenerators" />
     <CompilerVisibleProperty Include="DebugSmallSharp" />
     <CompilerVisibleProperty Include="MSBuildProjectDirectory" />
+    <CompilerVisibleProperty Include="ActiveDebugProfile" />
     <CompilerVisibleItemMetadata Include="AdditionalFiles" MetadataName="SourceItemType" />
   </ItemGroup>
 
